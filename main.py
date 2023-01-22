@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, redirect, url_for, render_template
 from flask_jwt_extended import create_access_token, JWTManager
 from flask_sqlalchemy import SQLAlchemy
-import sqlite3
+from email.message import EmailMessage
+import sqlite3, ssl, smtplib
 
 
 app = Flask(__name__)
@@ -11,9 +12,7 @@ app.config['JWT_SECRET_KEY'] = 'alttab'
 jwt = JWTManager(app)
 
 
-
-
-
+# Veritabanı işleme
 class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -24,7 +23,7 @@ class Users(db.Model):
     location = db.Column(db.String, nullable=False)
 
 
-
+# Giriş sayfası
 @app.route('/login', methods=['POST'])
 def login():
     conn = sqlite3.connect("users.db")
@@ -32,13 +31,11 @@ def login():
     c.execute("SELECT * FROM users")
     rows = c.fetchall()
 
-
     if not request.is_json:
         return jsonify({"msg": "Missing JSON in request"}), 400
 
     username = request.json.get('username', None)
     password = request.json.get('password', None)
-
 
     if not username:
         return jsonify({"msg": "Kullanıcı Adı giriniz"}), 400
@@ -48,7 +45,7 @@ def login():
     # kullanıcı kimlik kontrolü
 
     for row in rows:
-        if row[1]==username and row[5]==password:
+        if row[1] == username and row[5] == password:
 
             access_token = create_access_token(identity=username)
             return jsonify({"msg": "Giriş Başarılı!"}), 200
@@ -56,45 +53,51 @@ def login():
 
     conn.close()
 
-
     # erişim tokeni oluşturma
-    
-    #return jsonify(access_token=access_token), 200
+
+    # return jsonify(access_token=access_token), 200
     return jsonify({"msg": "Kullanıcı adı veya parola hatalı!"}), 400
 
 
-
-
+# Kullanıcı listesi
 @app.route("/users")
 def user_list():
-    users = db.session.execute(db.select(Users).order_by(Users.username)).scalars()
-    #return render_template("user/list.html", users=users)
+    users = db.session.execute(
+        db.select(Users).order_by(Users.username)).scalars()
+    # return render_template("user/list.html", users=users)
     return jsonify(users=users)
+
 
 @app.route("/users/create", methods=["GET", "POST"])
 def user_create():
     if request.method == "POST":
         user = Users(
-            name = request.form["name"],
-            surname = request.form["surname"],
-            username = request.form["username"],
-            email = request.form["email"],
-            password = request.form["password"],
-            location = request.form["location"]
-            
+            name=request.form["name"],
+            surname=request.form["surname"],
+            username=request.form["username"],
+            email=request.form["email"],
+            password=request.form["password"],
+            location=request.form["location"]
+
         )
         db.session.add(user)
         db.session.commit()
-        #return redirect(url_for("user_detail", id=user.id))
+        # return redirect(url_for("user_detail", id=user.id))
 
-    #return render_template("user/create.html")
+    # return render_template("user/create.html")
     return redirect(url_for("user_detail", id=user.id))
+
+# Kullanıcı bilgileri
+
 
 @app.route("/user/<int:id>")
 def user_detail(id):
     user = db.get_or_404(Users, id)
-    #return render_template("user/detail.html", user=user)
+    # return render_template("user/detail.html", user=user)
     return jsonify(user=user)
+
+# Kullanıcı silme
+
 
 @app.route("/user/<int:id>/delete", methods=["GET", "POST"])
 def user_delete(id):
@@ -106,6 +109,61 @@ def user_delete(id):
         return redirect(url_for("user_list"))
 
     return render_template("user/delete.html", user=user)
+
+# Kullanıcı güncelleme
+
+
+@app.route("/update/<int:id>", methods=["GET", "POST"])
+def update_user(id):
+    user_to_update = Users.query.get_or_404(id)
+    if request.method == "POST":
+        user_to_update.name = request.form["name"]
+        user_to_update.surname = request.form["surname"]
+        user_to_update.email = request.form["email"]
+        user_to_update.location = request.form["location"]
+        user_to_update.password = request.form["password"]
+        try:
+            db.session.commit()
+            return jsonify("Kullanıcı bilgileri başarıyla güncellendi")
+        except:
+            return "Kullanıcı bilgileri güncellenirken sorun oluştu..."
+
+    return
+
+#Forgot Password
+@app.route("/forgotpass", methods=["GET", "POST"])
+def send_email_pass():
+    given_email = request.form["email"]
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM users")
+    rows = c.fetchall()
+
+    for row in rows:
+        if row[4] == given_email:
+            email_sender = "netflix.db.gr4@gmail.com"
+            email_sender_password = "canubbaoreztdduh"
+            email_receiver = given_email
+            subject = "Şifre Sıfırlama"
+            body = "Helal lan Buğra"
+
+            em = EmailMessage()
+            em["from"] = email_sender
+            em["to"] = email_receiver
+            em["subject"] = subject
+            em.set_content(body)
+
+            context = ssl.create_default_context
+
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
+                smtp.login(email_sender, email_sender_password)
+                smtp.sendmail(email_sender, email_receiver, em.as_string())
+                return jsonify({"msg": "Lütfen eposta kutunuzu kontrol edin"}), 200
+                break
+
+    conn.close()
+
+
 
 
 if __name__ == '__main__':
