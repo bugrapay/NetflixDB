@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify, redirect, url_for, render_template
-from flask_jwt_extended import create_access_token, JWTManager
+from flask_jwt_extended import create_access_token, JWTManager, create_refresh_token
 from flask_sqlalchemy import SQLAlchemy
 from email.message import EmailMessage
 from sqlalchemy import create_engine, Column, String,Integer
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from api import auth, refresh_jwt
 import sqlite3, ssl, smtplib, os
 
 
@@ -69,6 +70,11 @@ def login():
             access_token = create_access_token(identity=username)
             return jsonify({"msg": "Giriş Başarılı!"}), 200
             break
+        refresh_token = create_refresh_token({"username": username})
+        return {
+            "access_token": access_token.decode(),
+            "refresh_token": refresh_token.decode(),
+        }
 
     conn.close()
 
