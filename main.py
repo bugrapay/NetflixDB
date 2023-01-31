@@ -2,23 +2,21 @@ from flask import Flask, request, jsonify, redirect, url_for, render_template
 from flask_jwt_extended import create_access_token, JWTManager, create_refresh_token
 from flask_sqlalchemy import SQLAlchemy
 from email.message import EmailMessage
-from sqlalchemy import create_engine, Column, String,Integer
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from api import auth, refresh_jwt
-import sqlite3, ssl, smtplib, os
+from sqlalchemy.orm import sessionmaker
+import sqlite3, ssl, smtplib
 
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/bugra/Desktop/Coding/NetflixDB/users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/bugra/Desktop/Coding/NetflixDB/filmsDB/films.db'
 db = SQLAlchemy(app)
 app.config['JWT_SECRET_KEY'] = 'alttab'
 jwt = JWTManager(app)
-engine = create_engine("sqlite:///Users/bugra/Desktop/Coding/NetflixDB/filmsDB/films.db")
 
 
 # Kullanıcı Veritabanı işleme
-Base = declarative_base()
 class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -28,20 +26,35 @@ class Users(db.Model):
     password = db.Column(db.String, nullable=False)
     location = db.Column(db.String, nullable=False)
 
-"""
-# Veritabanı işleme
 
-class Films(Base):
+# Film Veritabanı işleme
+class Films(db.Model):
     __tablename__ = "films"
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    year = Column(Integer, nullable=False)
-    cast = Column(String, nullable=False)
-    director = Column(String, nullable=False)
-    genre = Column(String, nullable=False)
-    score = Column(String, nullable=False)
-    thumbnail = Column(String)
-"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    year = db.Column(db.Integer)
+    cast = db.Column(db.String)
+    director = db.Column(db.String)
+    genre = db.Column(db.String)
+    score = db.Column(db.String)
+    url = db.Column(db.String)
+
+#Thumbnail Ekleme:
+@app.route('/api/films/<int:id>/thumbnails', methods=['POST'])
+def add_thumbnail(id):
+    film = Films(
+        url =request.form['url'],
+        name=request.form["name"],
+        year=request.form["year"],
+        cast=request.form["cast"],
+        director=request.form["director"],
+        genre=request.form["genre"],
+        score=request.form["score"]
+
+    )
+    db.session.add(film)
+    db.session.commit()
+    return 'Thumbnail added', 201
 
 # Giriş sayfası
 @app.route('/login', methods=['POST'])
