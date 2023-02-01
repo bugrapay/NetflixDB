@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect, url_for, render_template
-from flask_jwt_extended import create_access_token, JWTManager, create_refresh_token
+from flask_jwt_extended import create_access_token, JWTManager, create_refresh_token, jwt_required
 from flask_sqlalchemy import SQLAlchemy
 from email.message import EmailMessage
 from sqlalchemy import create_engine
@@ -39,7 +39,7 @@ class Films(db.Model):
     score = db.Column(db.String)
     url = db.Column(db.String)
 
-#Thumbnail Ekleme:
+#Film Ekleme:
 @app.route('/api/films/<int:id>/thumbnails', methods=['POST'])
 def add_thumbnail(id):
     film = Films(
@@ -128,6 +128,7 @@ def user_create():
 
 # Kullanıcı bilgileri
 @app.route("/user/<int:id>")
+@jwt_required
 def user_detail(id):
     user = db.get_or_404(Users, id)
     # return render_template("user/detail.html", user=user)
@@ -136,6 +137,7 @@ def user_detail(id):
 
 # Kullanıcı silme
 @app.route("/user/<int:id>/delete", methods=["GET", "POST"])
+@jwt_required
 def user_delete(id):
     user = db.get_or_404(Users, id)
 
@@ -149,6 +151,7 @@ def user_delete(id):
 
 # Kullanıcı güncelleme
 @app.route("/update/<int:id>", methods=["GET", "POST"])
+@jwt_required
 def update_user(id):
     user_to_update = Users.query.get_or_404(id)
     if request.method == "POST":
@@ -210,7 +213,7 @@ def send_email_pass():
 
     conn.close()
 
-
+"""
 @app.route("/deneme", methods=["GET", "POST"])
 def deneme():
     conn = sqlite3.connect("users.db")
@@ -222,6 +225,7 @@ def deneme():
     for row in rows:
         jsonify(print(row[4]))
         continue
+"""
 
 if __name__ == '__main__':
     app.run(debug=True)
