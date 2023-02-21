@@ -56,6 +56,7 @@ def add_thumbnail(id):
     db.session.commit()
     return 'Thumbnail added', 201
 
+
 # Giriş sayfası
 @app.route('/login', methods=['POST'])
 def login():
@@ -128,7 +129,7 @@ def user_create():
 
 # Kullanıcı bilgileri
 @app.route("/user/<int:id>")
-@jwt_required
+@jwt_required()
 def user_detail(id):
     user = db.get_or_404(Users, id)
     # return render_template("user/detail.html", user=user)
@@ -137,7 +138,7 @@ def user_detail(id):
 
 # Kullanıcı silme
 @app.route("/user/<int:id>/delete", methods=["GET", "POST"])
-@jwt_required
+@jwt_required()
 def user_delete(id):
     user = db.get_or_404(Users, id)
 
@@ -151,7 +152,7 @@ def user_delete(id):
 
 # Kullanıcı güncelleme
 @app.route("/update/<int:id>", methods=["GET", "POST"])
-@jwt_required
+@jwt_required()
 def update_user(id):
     user_to_update = Users.query.get_or_404(id)
     if request.method == "POST":
